@@ -182,10 +182,15 @@ export default function AdminPage() {
     return counts
   }
 
-  const fmtTime = (iso: string) => {
-    const d = new Date(iso)
-    return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
-  }
+  const fmtTime = (iso: string) =>
+    new Date(iso).toLocaleString('ko-KR', {
+      timeZone: 'Asia/Seoul',
+      month: 'numeric',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    })
 
   const counts = getVoteCounts(m.id)
   const total = matchVotes.length
