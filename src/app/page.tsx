@@ -44,6 +44,7 @@ export default function HomePage() {
   })
   const [loading, setLoading] = useState(false)
   const [votingMatch, setVotingMatch] = useState<number | null>(null)
+  const [resetting, setResetting] = useState<number | null>(null)
 
   const fetchVotes = useCallback(async () => {
     const res = await fetch('/api/votes')
@@ -95,11 +96,13 @@ export default function HomePage() {
   }
 
   const resetVote = async (mid: number) => {
+    setResetting(mid)
     const res = await fetch(`/api/votes?match_id=${mid}&name=${encodeURIComponent(confirmedName)}`, { method: 'DELETE' })
     if (res.ok) {
       await fetchVotes()
       setScores(prev => ({ ...prev, [mid]: { home: 0, away: 0 } }))
     }
+    setResetting(null)
   }
 
   const getMyVote = (mid: number) => votes.find(v => v.name === confirmedName && v.match_id === mid)
@@ -197,6 +200,7 @@ export default function HomePage() {
           onReset={resetVote}
           hasName={!!confirmedName}
           isVoting={loading && votingMatch === m.id}
+          isResetting={resetting === m.id}
         />
       ))}
 
@@ -227,7 +231,7 @@ export default function HomePage() {
 
 function MatchCard({
   match, myVote, voteCounts, totalVoters, scores,
-  onChangeScore, onVote, onReset, hasName, isVoting
+  onChangeScore, onVote, onReset, hasName, isVoting, isResetting
 }: {
   match: Match
   myVote: Vote | undefined
@@ -239,6 +243,7 @@ function MatchCard({
   onReset: (mid: number) => void
   hasName: boolean
   isVoting: boolean
+  isResetting: boolean
 }) {
   const isDone = match.status === 'done'
   const dispScore = isDone
@@ -318,22 +323,45 @@ function MatchCard({
         )}
 
         {!isDone && myVote && (() => {
-          const [hs, as] = myVote.score.split('-').map(Number)
+          const [hs, as_] = myVote.score.split('-').map(Number)
           const koIsHome = match.home.name === '대한민국'
-          const kg = koIsHome ? hs : as, og = koIsHome ? as : hs
-          const tag = kg > og ? '한국 승 예측' : kg < og ? '한국 패 예측' : '무승부 예측'
-          const color = kg > og ? '#1D9E75' : kg < og ? '#E24B4A' : '#888'
+          const kg = koIsHome ? hs : as_, og = koIsHome ? as_ : hs
+          const tag = kg > og ? '한국 승 예측 🔥' : kg < og ? '한국 패 예측 😰' : '무승부 예측'
+          const tagBg = kg > og ? '#EAF3DE' : kg < og ? '#FCEBEB' : '#f0f0ee'
+          const tagColor = kg > og ? '#27500A' : kg < og ? '#791F1F' : '#666'
           return (
             <>
-              <div className="text-center text-sm px-3 py-2 rounded-lg mb-3" style={{ background: '#f0f0ee' }}>
-                내 예측 <strong>{myVote.score}</strong>
-                <span className="ml-2 font-bold text-xs" style={{ color }}>{tag}</span>
+              <div style={{ borderRadius: 10, padding: '12px 14px', marginBottom: 10, background: tagBg, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <p style={{ fontSize: 11, color: tagColor, fontWeight: 600, margin: '0 0 2px', opacity: 0.7 }}>내 예측</p>
+                  <p style={{ fontSize: 22, fontWeight: 800, margin: 0, color: tagColor, letterSpacing: 2 }}>
+                    {myVote.score.replace('-', ' : ')}
+                  </p>
+                </div>
+                <span style={{ fontSize: 12, fontWeight: 700, color: tagColor }}>{tag}</span>
               </div>
               <button
                 onClick={() => onReset(match.id)}
-                className="w-full py-2 rounded-lg text-xs font-semibold"
-                style={{ background: '#f0f0ee', color: '#888' }}
-              >↺ 예측 다시 하기</button>
+                disabled={isResetting}
+                style={{
+                  width: '100%',
+                  padding: '11px 0',
+                  borderRadius: 10,
+                  border: '1.5px solid rgba(0,0,0,0.18)',
+                  background: isResetting ? '#f0f0ee' : '#fff',
+                  cursor: isResetting ? 'default' : 'pointer',
+                  fontWeight: 700,
+                  fontSize: 13,
+                  color: isResetting ? '#aaa' : '#444',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  transition: 'all 0.15s',
+                }}
+              >
+                {isResetting ? '처리 중...' : '✏ 수정하기'}
+              </button>
             </>
           )
         })()}
