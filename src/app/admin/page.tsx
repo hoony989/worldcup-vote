@@ -12,6 +12,7 @@ export default function AdminPage() {
   const [error, setError] = useState(false)
   const [votes, setVotes] = useState<Vote[]>([])
   const [activeTab, setActiveTab] = useState(0)
+  const [deleting, setDeleting] = useState<string | null>(null)
 
   const fetchVotes = useCallback(async () => {
     const res = await fetch('/api/votes')
@@ -25,6 +26,14 @@ export default function AdminPage() {
   const login = () => {
     if (pw === ADMIN_PW) { setAuthed(true); setError(false) }
     else { setError(true); setPw('') }
+  }
+
+  const deleteVote = async (name: string, matchId: number) => {
+    const key = `${name}:${matchId}`
+    setDeleting(key)
+    const res = await fetch(`/api/votes?name=${encodeURIComponent(name)}&match_id=${matchId}`, { method: 'DELETE' })
+    if (res.ok) await fetchVotes()
+    setDeleting(null)
   }
 
   if (!authed) {
@@ -155,7 +164,7 @@ export default function AdminPage() {
             <table className="w-full text-xs">
               <thead>
                 <tr style={{ borderBottom: '0.5px solid rgba(0,0,0,0.1)' }}>
-                  {['이름', '예측 스코어', '투표 시간'].map(h => (
+                  {['이름', '예측 스코어', '투표 시간', ''].map(h => (
                     <th key={h} className={`pb-2 font-semibold ${h==='이름'?'text-left':'text-center'}`} style={{ color: '#999' }}>{h}</th>
                   ))}
                 </tr>
@@ -164,6 +173,7 @@ export default function AdminPage() {
                 {matchVotes.map(v => {
                   const isCorrect = m.realScore && v.score === realKey
                   const pillColor = m.realScore ? (isCorrect ? { bg:'#EAF3DE', text:'#27500A' } : { bg:'#FCEBEB', text:'#791F1F' }) : { bg:'#FAEEDA', text:'#633806' }
+                  const isDel = deleting === `${v.name}:${v.match_id}`
                   return (
                     <tr key={v.id} style={{ borderBottom: '0.5px solid rgba(0,0,0,0.07)' }}>
                       <td className="py-2 font-semibold">👤 {v.name}</td>
@@ -171,6 +181,15 @@ export default function AdminPage() {
                         <span className="px-2 py-0.5 rounded-full font-bold text-xs" style={{ background: pillColor.bg, color: pillColor.text }}>{v.score}</span>
                       </td>
                       <td className="py-2 text-center" style={{ color: '#999' }}>{fmtTime(v.updated_at)}</td>
+                      <td className="py-2 text-center">
+                        <button
+                          disabled={isDel}
+                          onClick={() => deleteVote(v.name, v.match_id)}
+                          style={{ fontSize: 11, padding: '2px 8px', borderRadius: 5, border: '0.5px solid rgba(0,0,0,0.15)', background: isDel ? '#f0f0ee' : '#fff', color: '#E24B4A', cursor: 'pointer', opacity: isDel ? 0.5 : 1 }}
+                        >
+                          {isDel ? '…' : '삭제'}
+                        </button>
+                      </td>
                     </tr>
                   )
                 })}

@@ -96,7 +96,10 @@ export default function HomePage() {
 
   const resetVote = async (mid: number) => {
     const res = await fetch(`/api/votes?match_id=${mid}&name=${encodeURIComponent(confirmedName)}`, { method: 'DELETE' })
-    if (res.ok) await fetchVotes()
+    if (res.ok) {
+      await fetchVotes()
+      setScores(prev => ({ ...prev, [mid]: { home: 0, away: 0 } }))
+    }
   }
 
   const getMyVote = (mid: number) => votes.find(v => v.name === confirmedName && v.match_id === mid)
