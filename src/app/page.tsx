@@ -1,8 +1,35 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import QRCode from 'qrcode'
 import { matches, Match } from '@/lib/matches'
 import { Vote } from '@/lib/supabase'
+
+const QR_URL = 'https://worldcup-vote-ochre.vercel.app'
+
+const QR_COLORS: Record<number, string | null> = {
+  0: null, 1: '#1a0000', 2: '#CC0000', 4: '#ffffff', 5: '#FFD700',
+}
+
+const DEVIL = [
+  [0,0,0,1,1,0,0,0,0,0,0,0,0,0,1,1,0,0,0],
+  [0,0,1,2,2,1,0,0,0,0,0,0,0,1,2,2,1,0,0],
+  [0,1,2,2,2,2,1,0,0,0,0,0,1,2,2,2,2,1,0],
+  [1,2,2,2,2,2,2,1,0,0,0,1,2,2,2,2,2,2,1],
+  [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+  [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+  [1,2,2,1,1,1,2,2,2,2,2,2,2,1,1,1,2,2,1],
+  [1,2,2,1,5,1,2,2,2,2,2,2,2,1,5,1,2,2,1],
+  [1,2,2,1,1,1,2,2,2,2,2,2,2,1,1,1,2,2,1],
+  [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+  [1,2,2,2,1,2,1,2,1,2,1,2,1,2,1,2,2,2,1],
+  [1,2,2,2,1,4,1,4,1,4,1,4,1,4,1,2,2,2,1],
+  [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+  [0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
+  [0,0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0,0],
+  [0,0,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,0],
+  [0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0],
+]
 
 const MAX_SCORE = 10
 
@@ -83,7 +110,11 @@ export default function HomePage() {
   }
 
   return (
-    <main className="max-w-xl mx-auto px-4 py-8 pb-16">
+    <div className="max-w-5xl mx-auto px-4 py-8">
+      <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
+        {/* ── 왼쪽: 투표 영역 ── */}
+        <main style={{ flex: 1, minWidth: 0, paddingBottom: '4rem' }}>
+
       {/* 헤더 */}
       <div className="text-center mb-8">
         <div className="text-5xl mb-3">🏆</div>
@@ -166,10 +197,28 @@ export default function HomePage() {
         />
       ))}
 
+      {/* 모바일: QR 초대 카드 */}
+      <div className="card mt-6" style={{ textAlign: 'center' }} id="mobile-qr-invite">
+        <style>{`@media (min-width: 900px) { #mobile-qr-invite { display: none; } }`}</style>
+        <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>친구에게 공유하기</p>
+        <p style={{ fontSize: 12, color: '#888', marginBottom: 10 }}>worldcup-vote-ochre.vercel.app</p>
+        <MobileCopyButton />
+      </div>
+
       <div className="text-center mt-8">
         <a href="/admin" className="text-xs" style={{ color: '#999' }}>⚙ 관리자 페이지</a>
       </div>
-    </main>
+
+        </main>{/* end left column */}
+
+        {/* ── 오른쪽: QR 사이드바 ── */}
+        <aside id="qr-sidebar" style={{ width: 220, flexShrink: 0, position: 'sticky', top: '2rem' }}>
+          <style>{`@media (max-width: 899px) { #qr-sidebar { display: none; } }`}</style>
+          <QrSidebar />
+        </aside>
+
+      </div>{/* end flex row */}
+    </div>
   )
 }
 
@@ -345,5 +394,100 @@ function VoteBars({ voteCounts, totalVoters, myVote, realScore }: {
         )
       })}
     </div>
+  )
+}
+
+function QrSidebar() {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const size = 188
+    QRCode.toDataURL(QR_URL, {
+      errorCorrectionLevel: 'H',
+      margin: 1,
+      width: size,
+      color: { dark: '#1a1a1a', light: '#ffffff' },
+    }).then((dataUrl) => {
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+      const img = new Image()
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, size, size)
+        const rows = DEVIL.length, cols = DEVIL[0].length
+        const ps = 4
+        const dw = cols * ps, dh = rows * ps
+        const sx = Math.floor((size - dw) / 2)
+        const sy = Math.floor((size - dh) / 2)
+        ctx.fillStyle = '#ffffff'
+        ctx.fillRect(sx - ps, sy - ps, dw + ps * 2, dh + ps * 2)
+        DEVIL.forEach((row, y) => {
+          row.forEach((p, x) => {
+            const color = QR_COLORS[p]
+            if (color) {
+              ctx.fillStyle = color
+              ctx.fillRect(sx + x * ps, sy + y * ps, ps, ps)
+            }
+          })
+        })
+      }
+      img.src = dataUrl
+    })
+  }, [])
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(QR_URL).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  return (
+    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div style={{ background: '#CC0000', padding: '10px 12px', textAlign: 'center' }}>
+        <p style={{ color: '#fff', fontWeight: 700, fontSize: 12, margin: 0 }}>친구 초대하기</p>
+        <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, margin: '2px 0 0' }}>QR 스캔으로 바로 참여</p>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '14px 14px 10px', background: '#fff' }}>
+        <canvas ref={canvasRef} width={188} height={188} style={{ display: 'block' }} />
+      </div>
+      <div style={{ padding: '10px 12px', textAlign: 'center', borderTop: '0.5px solid rgba(0,0,0,0.08)' }}>
+        <p style={{ fontSize: 10, color: '#999', margin: '0 0 8px', wordBreak: 'break-all', lineHeight: 1.4 }}>
+          worldcup-vote-ochre.vercel.app
+        </p>
+        <button
+          onClick={handleCopy}
+          style={{
+            fontSize: 11, padding: '5px 14px', borderRadius: 7,
+            border: '0.5px solid rgba(0,0,0,0.18)', background: '#fff', cursor: 'pointer', width: '100%',
+          }}
+        >
+          {copied ? '복사됨 ✓' : '링크 복사'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function MobileCopyButton() {
+  const [copied, setCopied] = useState(false)
+  const handleCopy = () => {
+    navigator.clipboard.writeText(QR_URL).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+  return (
+    <button
+      onClick={handleCopy}
+      style={{
+        fontSize: 13, padding: '8px 20px', borderRadius: 8,
+        border: '0.5px solid rgba(0,0,0,0.18)', background: '#fff', cursor: 'pointer',
+      }}
+    >
+      {copied ? '복사됨 ✓' : '링크 복사하기'}
+    </button>
   )
 }
