@@ -20,7 +20,7 @@ export const matches: Match[] = [
   },
   {
     id: 1,
-    date: '6월 18일 (목) 21:00',
+    date: '6월 19일 (금) 오전 10:00 KST',
     venue: '에스타디오 아크론, 과달라하라',
     home: { name: '멕시코', flag: '🇲🇽' },
     away: { name: '대한민국', flag: '🇰🇷' },
@@ -29,7 +29,7 @@ export const matches: Match[] = [
   },
   {
     id: 2,
-    date: '6월 24일 (화) 21:00',
+    date: '6월 25일 (목) 오전 10:00 KST',
     venue: '에스타디오 BBVA, 몬테레이',
     home: { name: '남아공', flag: '🇿🇦' },
     away: { name: '대한민국', flag: '🇰🇷' },
