@@ -222,26 +222,27 @@ export default function AdminPage() {
         .live-dot { animation: livePulse 1.4s infinite; }
       `}</style>
 
-      {/* LIVE 뱃지 */}
-      <div style={{
-        position: 'fixed', top: 14, right: 16, zIndex: 100,
-        background: '#E24B4A', color: '#fff',
-        fontSize: 11, fontWeight: 800, padding: '4px 10px',
-        borderRadius: 20, display: 'flex', alignItems: 'center', gap: 5,
-        boxShadow: '0 2px 8px rgba(226,75,74,0.4)',
-      }}>
-        <span className="live-dot" style={{ width: 6, height: 6, background: '#fff', borderRadius: '50%', display: 'inline-block' }} />
-        LIVE
-      </div>
-
       <div className="max-w-5xl mx-auto px-4 py-8">
-        <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
-        <main style={{ flex: 1, minWidth: 0, paddingBottom: '4rem' }}>
+        {/* 헤더 — flex row 밖으로 꺼내 QR이 제목 아래에서 시작 */}
         <a href="/" className="text-xs flex items-center gap-1 mb-5" style={{ color: '#888' }}>← 투표 페이지로</a>
         <div className="text-center mb-5">
-          <h1 className="text-xl font-semibold mb-1">📊 월드컵 예측 집계 현황</h1>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 4 }}>
+            <h1 className="text-xl font-semibold" style={{ margin: 0 }}>📊 월드컵 예측 집계 현황</h1>
+            <div style={{
+              background: '#E24B4A', color: '#fff',
+              fontSize: 11, fontWeight: 800, padding: '3px 9px',
+              borderRadius: 20, display: 'flex', alignItems: 'center', gap: 5,
+              boxShadow: '0 2px 8px rgba(226,75,74,0.35)',
+            }}>
+              <span className="live-dot" style={{ width: 6, height: 6, background: '#fff', borderRadius: '50%', display: 'inline-block' }} />
+              LIVE
+            </div>
+          </div>
           <p className="text-xs" style={{ color: '#888' }}>2026 FIFA 월드컵 · 그룹 A · 대한민국</p>
         </div>
+
+        <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
+        <main style={{ flex: 1, minWidth: 0, paddingBottom: '4rem' }}>
 
         {/* 통계 요약 */}
         <div className="grid grid-cols-3 gap-3 mb-5">

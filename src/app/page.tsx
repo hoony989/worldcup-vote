@@ -103,16 +103,16 @@ export default function HomePage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
-      <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
-        {/* ── 왼쪽: 투표 영역 ── */}
-        <main style={{ flex: 1, minWidth: 0, paddingBottom: '4rem' }}>
-
-      {/* 헤더 */}
+      {/* 헤더 — flex row 밖으로 꺼내 QR이 제목 아래에서 시작 */}
       <div className="text-center mb-8">
         <div className="text-5xl mb-3">🏆</div>
         <h1 className="text-xl font-semibold mb-1">2026 FIFA 월드컵 — 한국 경기 예측</h1>
         <p className="text-sm" style={{ color: 'var(--text-muted, #888)' }}>그룹 A · 대한민국 · 체코 · 멕시코 · 남아프리카공화국</p>
       </div>
+
+      <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
+        {/* ── 왼쪽: 투표 영역 ── */}
+        <main style={{ flex: 1, minWidth: 0, paddingBottom: '4rem' }}>
 
       {/* 이름 카드 */}
       <div className="card mb-4">
