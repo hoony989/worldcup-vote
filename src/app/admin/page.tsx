@@ -159,8 +159,8 @@ export default function AdminPage() {
       })
       .subscribe()
 
-    // WebSocket 끊김 대비 30초 fallback
-    const fallback = setInterval(fetchVotes, 30000)
+    // WebSocket 끊김 대비 8초 fallback
+    const fallback = setInterval(fetchVotes, 8000)
     return () => {
       supabase.removeChannel(channel)
       clearInterval(fallback)
