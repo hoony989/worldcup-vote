@@ -1,33 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import QRCode from 'qrcode'
+import { useState, useEffect, useCallback } from 'react'
 import { matches } from '@/lib/matches'
 import { Vote, supabase } from '@/lib/supabase'
-
-const QR_URL = 'https://worldcup-vote-ochre.vercel.app'
-const QR_COLORS: Record<number, string | null> = {
-  0: null, 1: '#1a0000', 2: '#CC0000', 4: '#ffffff', 5: '#FFD700',
-}
-const DEVIL = [
-  [0,0,0,1,1,0,0,0,0,0,0,0,0,0,1,1,0,0,0],
-  [0,0,1,2,2,1,0,0,0,0,0,0,0,1,2,2,1,0,0],
-  [0,1,2,2,2,2,1,0,0,0,0,0,1,2,2,2,2,1,0],
-  [1,2,2,2,2,2,2,1,0,0,0,1,2,2,2,2,2,2,1],
-  [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
-  [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
-  [1,2,2,1,1,1,2,2,2,2,2,2,2,1,1,1,2,2,1],
-  [1,2,2,1,5,1,2,2,2,2,2,2,2,1,5,1,2,2,1],
-  [1,2,2,1,1,1,2,2,2,2,2,2,2,1,1,1,2,2,1],
-  [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
-  [1,2,2,2,1,2,1,2,1,2,1,2,1,2,1,2,2,2,1],
-  [1,2,2,2,1,4,1,4,1,4,1,4,1,4,1,2,2,2,1],
-  [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
-  [0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
-  [0,0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0,0],
-  [0,0,0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,0],
-  [0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0],
-]
+import QrSidebar from '@/components/QrSidebar'
 
 const ADMIN_PW = 'korea2026'
 
@@ -497,7 +473,7 @@ export default function AdminPage() {
         </main>
 
         {/* QR 사이드바 */}
-        <aside id="admin-qr-sidebar" style={{ width: 220, flexShrink: 0, position: 'sticky', top: '2rem' }}>
+        <aside id="admin-qr-sidebar" style={{ width: 310, flexShrink: 0, position: 'sticky', top: '2rem' }}>
           <style>{`@media (max-width: 899px) { #admin-qr-sidebar { display: none; } }`}</style>
           <QrSidebar />
         </aside>
@@ -508,76 +484,3 @@ export default function AdminPage() {
   )
 }
 
-function QrSidebar() {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [copied, setCopied] = useState(false)
-
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const size = 188
-    QRCode.toDataURL(QR_URL, {
-      errorCorrectionLevel: 'H',
-      margin: 1,
-      width: size,
-      color: { dark: '#1a1a1a', light: '#ffffff' },
-    }).then((dataUrl) => {
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return
-      const img = new Image()
-      img.onload = () => {
-        ctx.drawImage(img, 0, 0, size, size)
-        const rows = DEVIL.length, cols = DEVIL[0].length
-        const ps = 4
-        const dw = cols * ps, dh = rows * ps
-        const sx = Math.floor((size - dw) / 2)
-        const sy = Math.floor((size - dh) / 2)
-        ctx.fillStyle = '#ffffff'
-        ctx.fillRect(sx - ps, sy - ps, dw + ps * 2, dh + ps * 2)
-        DEVIL.forEach((row, y) => {
-          row.forEach((p, x) => {
-            const color = QR_COLORS[p]
-            if (color) {
-              ctx.fillStyle = color
-              ctx.fillRect(sx + x * ps, sy + y * ps, ps, ps)
-            }
-          })
-        })
-      }
-      img.src = dataUrl
-    })
-  }, [])
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(QR_URL).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    })
-  }
-
-  return (
-    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-      <div style={{ background: '#CC0000', padding: '10px 12px', textAlign: 'center' }}>
-        <p style={{ color: '#fff', fontWeight: 700, fontSize: 12, margin: 0 }}>친구 초대하기</p>
-        <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, margin: '2px 0 0' }}>QR 스캔으로 바로 참여</p>
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '14px 14px 10px', background: '#fff' }}>
-        <canvas ref={canvasRef} width={188} height={188} style={{ display: 'block' }} />
-      </div>
-      <div style={{ padding: '10px 12px', textAlign: 'center', borderTop: '0.5px solid rgba(0,0,0,0.08)' }}>
-        <p style={{ fontSize: 10, color: '#999', margin: '0 0 8px', wordBreak: 'break-all', lineHeight: 1.4 }}>
-          worldcup-vote-ochre.vercel.app
-        </p>
-        <button
-          onClick={handleCopy}
-          style={{
-            fontSize: 11, padding: '5px 14px', borderRadius: 7,
-            border: '0.5px solid rgba(0,0,0,0.18)', background: '#fff', cursor: 'pointer', width: '100%',
-          }}
-        >
-          {copied ? '복사됨 ✓' : '링크 복사'}
-        </button>
-      </div>
-    </div>
-  )
-}
