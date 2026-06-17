@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import QRCode from 'qrcode'
 import { matches } from '@/lib/matches'
-import { Vote } from '@/lib/supabase'
+import { Vote, supabase } from '@/lib/supabase'
 
 const QR_URL = 'https://worldcup-vote-ochre.vercel.app'
 const QR_COLORS: Record<number, string | null> = {
@@ -149,7 +149,22 @@ export default function AdminPage() {
   }, [])
 
   useEffect(() => {
-    if (authed) { fetchVotes(); const t = setInterval(fetchVotes, 5000); return () => clearInterval(t) }
+    if (!authed) return
+    fetchVotes()
+
+    const channel = supabase
+      .channel('admin-votes-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'votes' }, () => {
+        fetchVotes()
+      })
+      .subscribe()
+
+    // WebSocket 끊김 대비 30초 fallback
+    const fallback = setInterval(fetchVotes, 30000)
+    return () => {
+      supabase.removeChannel(channel)
+      clearInterval(fallback)
+    }
   }, [authed, fetchVotes])
 
   const login = () => {

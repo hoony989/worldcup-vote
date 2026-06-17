@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import QRCode from 'qrcode'
 import { matches, Match } from '@/lib/matches'
-import { Vote } from '@/lib/supabase'
+import { Vote, supabase } from '@/lib/supabase'
 
 const QR_URL = 'https://worldcup-vote-ochre.vercel.app'
 
@@ -55,8 +55,20 @@ export default function HomePage() {
     const saved = localStorage.getItem('wc2026_name')
     if (saved) setConfirmedName(saved)
     fetchVotes()
-    const interval = setInterval(fetchVotes, 10000)
-    return () => clearInterval(interval)
+
+    const channel = supabase
+      .channel('votes-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'votes' }, () => {
+        fetchVotes()
+      })
+      .subscribe()
+
+    // WebSocket 끊김 대비 60초 fallback
+    const fallback = setInterval(fetchVotes, 60000)
+    return () => {
+      supabase.removeChannel(channel)
+      clearInterval(fallback)
+    }
   }, [fetchVotes])
 
   const setNameConfirmed = () => {
