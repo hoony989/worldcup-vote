@@ -19,16 +19,28 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false)
   const [votingMatch, setVotingMatch] = useState<number | null>(null)
   const [resetting, setResetting] = useState<number | null>(null)
+  const [matchSettings, setMatchSettings] = useState<Record<number, boolean>>({})
 
   const fetchVotes = useCallback(async () => {
     const res = await fetch('/api/votes')
     if (res.ok) setVotes(await res.json())
   }, [])
 
+  const fetchSettings = useCallback(async () => {
+    const res = await fetch('/api/settings')
+    if (res.ok) {
+      const data: { match_id: number; voting_open: boolean }[] = await res.json()
+      const map: Record<number, boolean> = {}
+      data.forEach(s => { map[s.match_id] = s.voting_open })
+      setMatchSettings(map)
+    }
+  }, [])
+
   useEffect(() => {
     const saved = localStorage.getItem('wc2026_name')
     if (saved) setConfirmedName(saved)
     fetchVotes()
+    fetchSettings()
 
     const channel = supabase
       .channel('votes-realtime')
@@ -187,6 +199,7 @@ export default function HomePage() {
           hasName={!!confirmedName}
           isVoting={loading && votingMatch === m.id}
           isResetting={resetting === m.id}
+          votingOpen={matchSettings[m.id] ?? true}
         />
       ))}
 
@@ -217,7 +230,7 @@ export default function HomePage() {
 
 function MatchCard({
   match, myVote, voteCounts, totalVoters, scores,
-  onChangeScore, onVote, onReset, hasName, isVoting, isResetting
+  onChangeScore, onVote, onReset, hasName, isVoting, isResetting, votingOpen
 }: {
   match: Match
   myVote: Vote | undefined
@@ -230,6 +243,7 @@ function MatchCard({
   hasName: boolean
   isVoting: boolean
   isResetting: boolean
+  votingOpen: boolean
 }) {
   const isDone = match.status === 'done'
   const dispScore = isDone
@@ -286,7 +300,13 @@ function MatchCard({
         )}
 
         {/* 예정 경기: 피커 또는 내 예측 */}
-        {!isDone && !myVote && (
+        {!isDone && !votingOpen && !myVote && (
+          <div className="text-center py-4 rounded-lg" style={{ background: '#f5f5f3', color: '#999' }}>
+            <p style={{ fontSize: 20, marginBottom: 4 }}>🔒</p>
+            <p style={{ fontSize: 13, fontWeight: 600 }}>투표가 마감되었습니다</p>
+          </div>
+        )}
+        {!isDone && votingOpen && !myVote && (
           <>
             <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: '#888' }}>스코어 예측</p>
             <div className="flex items-center justify-center gap-4 mb-4">
@@ -326,28 +346,30 @@ function MatchCard({
                 </div>
                 <span style={{ fontSize: 12, fontWeight: 700, color: tagColor }}>{tag}</span>
               </div>
-              <button
-                onClick={() => onReset(match.id)}
-                disabled={isResetting}
-                style={{
-                  width: '100%',
-                  padding: '11px 0',
-                  borderRadius: 10,
-                  border: '1.5px solid rgba(0,0,0,0.18)',
-                  background: isResetting ? '#f0f0ee' : '#fff',
-                  cursor: isResetting ? 'default' : 'pointer',
-                  fontWeight: 700,
-                  fontSize: 13,
-                  color: isResetting ? '#aaa' : '#444',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6,
-                  transition: 'all 0.15s',
-                }}
-              >
-                {isResetting ? '처리 중...' : '✏ 수정하기'}
-              </button>
+              {votingOpen && (
+                <button
+                  onClick={() => onReset(match.id)}
+                  disabled={isResetting}
+                  style={{
+                    width: '100%',
+                    padding: '11px 0',
+                    borderRadius: 10,
+                    border: '1.5px solid rgba(0,0,0,0.18)',
+                    background: isResetting ? '#f0f0ee' : '#fff',
+                    cursor: isResetting ? 'default' : 'pointer',
+                    fontWeight: 700,
+                    fontSize: 13,
+                    color: isResetting ? '#aaa' : '#444',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {isResetting ? '처리 중...' : '✏ 수정하기'}
+                </button>
+              )}
             </>
           )
         })()}

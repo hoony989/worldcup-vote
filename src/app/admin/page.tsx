@@ -111,22 +111,49 @@ function getWDL(matchVotes: Vote[], match: typeof matches[0]) {
   }
 }
 
+const firstUpcoming = matches.findIndex(m => m.status === 'upcoming')
+
 export default function AdminPage() {
   const [pw, setPw] = useState('')
   const [authed, setAuthed] = useState(false)
   const [error, setError] = useState(false)
   const [votes, setVotes] = useState<Vote[]>([])
-  const [activeTab, setActiveTab] = useState(0)
+  const [activeTab, setActiveTab] = useState(firstUpcoming >= 0 ? firstUpcoming : 0)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [matchSettings, setMatchSettings] = useState<Record<number, boolean>>({})
+  const [toggling, setToggling] = useState(false)
 
   const fetchVotes = useCallback(async () => {
     const res = await fetch('/api/votes')
     if (res.ok) setVotes(await res.json())
   }, [])
 
+  const fetchSettings = useCallback(async () => {
+    const res = await fetch('/api/settings')
+    if (res.ok) {
+      const data: { match_id: number; voting_open: boolean }[] = await res.json()
+      const map: Record<number, boolean> = {}
+      data.forEach(s => { map[s.match_id] = s.voting_open })
+      setMatchSettings(map)
+    }
+  }, [])
+
+  const toggleVoting = async (matchId: number) => {
+    setToggling(true)
+    const next = !matchSettings[matchId]
+    const res = await fetch('/api/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ match_id: matchId, voting_open: next }),
+    })
+    if (res.ok) setMatchSettings(prev => ({ ...prev, [matchId]: next }))
+    setToggling(false)
+  }
+
   useEffect(() => {
     if (!authed) return
     fetchVotes()
+    fetchSettings()
 
     const channel = supabase
       .channel('admin-votes-realtime')
@@ -259,16 +286,55 @@ export default function AdminPage() {
         </div>
 
         {/* 경기별 탭 */}
-        <div className="flex gap-1 p-1 rounded-lg mb-4" style={{ background: '#f0f0ee' }}>
-          {['1차전 vs 체코', '2차전 vs 멕시코', '3차전 vs 남아공'].map((label, i) => (
-            <button
-              key={i}
-              onClick={() => setActiveTab(i)}
-              className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all ${activeTab === i ? 'bg-white shadow-sm' : ''}`}
-              style={{ color: activeTab === i ? 'var(--foreground)' : '#888' }}
-            >{label}</button>
-          ))}
+        <div className="flex gap-1 p-1 rounded-lg mb-3" style={{ background: '#f0f0ee' }}>
+          {['1차전 vs 체코', '2차전 vs 멕시코', '3차전 vs 남아공'].map((label, i) => {
+            const open = matchSettings[i] ?? false
+            return (
+              <button
+                key={i}
+                onClick={() => setActiveTab(i)}
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all ${activeTab === i ? 'bg-white shadow-sm' : ''}`}
+                style={{ color: activeTab === i ? 'var(--foreground)' : '#888', position: 'relative' }}
+              >
+                {label}
+                <span style={{
+                  display: 'inline-block', marginLeft: 4, width: 6, height: 6, borderRadius: '50%',
+                  background: open ? '#22c55e' : '#e5e7eb', verticalAlign: 'middle',
+                }} />
+              </button>
+            )
+          })}
         </div>
+
+        {/* 투표 개폐 토글 */}
+        {(() => {
+          const open = matchSettings[m.id] ?? false
+          return (
+            <div className="card mb-4" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <p style={{ fontSize: 12, fontWeight: 700, margin: 0 }}>
+                  {m.home.name} vs {m.away.name} 투표
+                </p>
+                <p style={{ fontSize: 11, color: open ? '#16a34a' : '#999', margin: '2px 0 0' }}>
+                  {open ? '● 현재 투표 진행 중' : '○ 투표 마감됨'}
+                </p>
+              </div>
+              <button
+                onClick={() => toggleVoting(m.id)}
+                disabled={toggling}
+                style={{
+                  padding: '6px 16px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+                  border: 'none', cursor: toggling ? 'default' : 'pointer',
+                  background: open ? '#FCEBEB' : '#EAF3DE',
+                  color: open ? '#CC0000' : '#16a34a',
+                  opacity: toggling ? 0.6 : 1,
+                }}
+              >
+                {toggling ? '...' : open ? '투표 닫기' : '투표 열기'}
+              </button>
+            </div>
+          )
+        })()}
 
         {/* ── 분위기 배너 ── */}
         <div
